@@ -1,100 +1,100 @@
-import os
+import os 
 import cv2
 import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder 
+from sklearn.decomposition import PCA 
+from sklearn.svm import SVC 
+from sklearn.model_selection import train_test_split 
+from sklearn.metrics import accuracy_score 
 
-# To detect faces load a pre-trained HaarCascade classifier
+# To detect faces, load a pretrained Haar Cascade classifier
 face_cascade = cv2.CascadeClassifier('/Users/nanditabhutada/Downloads/SPID/opencv/haarcascades/haarcascade_frontalface_default.xml')
 
-# Assign the names of sporrts personalities which refers to sub-folders
-personalities = ["roger_federer", "virat_kohli", "maria_sharapova", "serena_williams", "lionel_messi"]
+# Assign the names of sports personalities which refer to sub-folders
+sports_personalities = ['roger_federer', 'virat_kohli', 'maria_sharapova', 'serena_williams','lionel_messi']
 
-# Load and preprocess data
-data = []
+# Load the data and preprocess it
 labels = []
+data = []
 
-for personality in personalities:
-    images_path = f"/Users/nanditabhutada/Downloads/SPID/dataset/{personality}/"
-    for filename in os.listdir(images_path):
+for personality in sports_personalities:
+    image_path = f'/Users/nanditabhutada/Downloads/SPID/dataset/{personality}'
+    for filename in os.listdir(image_path):
         # Use opencv to read image in grayscale
-        img = cv2.imread(os.path.join(images_path, filename), cv2.IMREAD_GRAYSCALE)
-
-        # Perform face detection using pre-trained cascade classifier
-        faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
+        image = cv2.imread(os.path.join(image_path, filename), cv2.IMREAD_GRAYSCALE) 
+        
+        # Perform face detection using pre-trained Haar Cascade classifier
+        faces = face_cascade.detectMultiScale(image, scaleFactor = 1.1, minNeighbors = 5, minSize = (30,30))
+        
         if len(faces) == 0:
             continue
-
-        # Initializing the first detected face as region of interest
+        
+        # Initializing first detected face as region of interest
         x, y, w, h = faces[0]
-        face_roi = img[y:y + h, x:x + w]
-
+        face_roi = image[y:y + h, x:x + h]
+        
         # To match the training data size and flatten it, resize the face region
-        resized_face_roi = cv2.resize(face_roi, (100, 100)).flatten()
-
+        resized_face_roi = cv2.resize(face_roi, (100,100)).flatten()
+        
         data.append(resized_face_roi)
         labels.append(personality)
-
-
+        
 data = np.array(data)
 labels = np.array(labels)
 
-# Use label encoder to convert string labels to numerical labels
+#Use label encoder to convert string labels to numerical labels
 label_encoder = LabelEncoder()
 encoded_labels = label_encoder.fit_transform(labels)
 
 # Data is split into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(data, encoded_labels, test_size=0.2, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(data, encoded_labels, test_size = 0.2, random_state = 42) 
 
-# Use PCA for dimensionality reduction of data
-pca = PCA(n_components=0.95) 
-X_train_pca = pca.fit_transform(X_train)
-X_test_pca = pca.transform(X_test)
+# Use PCA for dimensionality reduction
+pca = PCA(n_components = 0.95)
+x_train_pca = pca.fit_transform(x_train)
+x_test_pca = pca.transform(x_test)
 
-# Create an Support Vector Machine (SVM) classifier for training data 
+# Create Support Vector Machine (SVM) classifier for training data
 svm_classifier = SVC()
-svm_classifier.fit(X_train_pca, y_train)
+svm_classifier.fit(x_train_pca, y_train)
 
-# Using trained SVM classifier on the test set for prediction
-predictions = svm_classifier.predict(X_test_pca)
+# Using trained SVM classifier on the test set for making predictions
+prediction = svm_classifier.predict(x_test_pca)
+
 # Calculate and print the accuracy of the model on test set
-accuracy = accuracy_score(y_test, predictions)
-print(f"Accuracy: {accuracy}")
+accuracy = accuracy_score(y_test, prediction)
+print(f'Accuracy: {accuracy}')
 
 # Define a function to test a new image and predict the personality
-def test_image(image_path):
+def test_image(images_path):
     # Read and preprocess the test image
-    test_img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    test_images = cv2.imread(images_path, cv2.IMREAD_GRAYSCALE)
 
-    # Perform face detection using pre-trained cascade classifier
-    faces = face_cascade.detectMultiScale(test_img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    #Perform face detection using pretrained Haar Cascade classifier
+    faces = face_cascade.detectMultiScale(test_images, scaleFactor = 1.1, minSize = (30,30), minNeighbors = 5)
 
     if len(faces) == 0:
-        print("No faces detected in the image.")
+        print(" No faces detected")
         return
 
     # Initializing the first detected face as region of interest
     x, y, w, h = faces[0]
-    face_roi = test_img[y:y + h, x:x + w]
+    face_roi = test_images[y:y + h, x:x + w]
 
     # To match the training data size and flatten it, resize the face region
-    resized_face_roi = cv2.resize(face_roi, (100, 100)).flatten()
+    resized_face_roi = cv2.resize(face_roi, (100,100)).flatten()
 
-    # To test image, apply pca transformation
-    test_img_pca = pca.transform([resized_face_roi])
+    # To test image, apply PCA transformation
+    test_image_pca = pca.transform([resized_face_roi])
 
-    # Using trained SVM classifier for prediction
-    predicted_label = svm_classifier.predict(test_img_pca)[0]
+    # Using SVM classifier for prediction
+    predicted_label = svm_classifier.predict(test_image_pca)[0]
 
-    # Decode the predicted numerical label for the corrosponding personality
+    # Decode the predicted numerical label for the corresponding personality
     personality = label_encoder.inverse_transform([predicted_label])[0]
-    
+
     # Print the predicted personality name for the test image
-    print(f"The predicted personality for the image is: {personality}")
+    print (f'The predicted personality for the image is: {personality}')
 
 # Testing the image
-test_image("/Users/nanditabhutada/Downloads/SPID/test_images/maria_sharapova26.png")
+test_image('/Users/nanditabhutada/Downloads/SPID/test_images/maria_sharapova26.png')
